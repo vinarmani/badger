@@ -5,7 +5,7 @@ const bitbox = new BITBOX()
 const BigNumber = require('slpjs/node_modules/bignumber.js')
 const slpjs = require('slpjs')
 const SLPJS = new slpjs.Slp(SLP)
-// var PaymentProtocol = require('bitcore-payment-protocol')
+const PaymentProtocol = require('bitcore-payment-protocol')
 const axios = require('axios')
 const toBuffer = require('blob-to-buffer')
 
@@ -218,156 +218,156 @@ class BitboxUtils {
   }
 
   // TODO: Payment requests
-  // static decodePaymentResponse(responseData) {
-  //   return new Promise((resolve, reject) => {
-  //     toBuffer(responseData, function(err, buffer) {
-  //       if (err) reject(err)
+  static decodePaymentResponse(responseData) {
+    return new Promise((resolve, reject) => {
+      toBuffer(responseData, function(err, buffer) {
+        if (err) reject(err)
 
-  //       try {
-  //         const responseBody = PaymentProtocol.PaymentACK.decode(buffer)
-  //         const responseAck = new PaymentProtocol().makePaymentACK(responseBody)
-  //         const responseSerializedPayment = responseAck.get('payment')
-  //         const responseDecodedPayment = PaymentProtocol.Payment.decode(
-  //           responseSerializedPayment
-  //         )
-  //         const responsePayment = new PaymentProtocol().makePayment(
-  //           responseDecodedPayment
-  //         )
-  //         const txHex = responsePayment.message.transactions[0].toHex()
-  //         resolve(txHex)
-  //       } catch (ex) {
-  //         reject(ex)
-  //       }
-  //     })
-  //   })
-  // }
+        try {
+          const responseBody = PaymentProtocol.PaymentACK.decode(buffer)
+          const responseAck = new PaymentProtocol().makePaymentACK(responseBody)
+          const responseSerializedPayment = responseAck.get('payment')
+          const responseDecodedPayment = PaymentProtocol.Payment.decode(
+            responseSerializedPayment
+          )
+          const responsePayment = new PaymentProtocol().makePayment(
+            responseDecodedPayment
+          )
+          const txHex = responsePayment.message.transactions[0].toHex()
+          resolve(txHex)
+        } catch (ex) {
+          reject(ex)
+        }
+      })
+    })
+  }
 
   // TODO: Payment requests
-  // static signAndPublishPaymentRequestTransaction(
-  //   txParams,
-  //   keyPair,
-  //   spendableUtxos
-  // ) {
-  //   return new Promise(async (resolve, reject) => {
-  //     try {
-  //       const from = txParams.from
-  //       const satoshisToSend = parseInt(txParams.value)
+  static signAndPublishPaymentRequestTransaction(
+    txParams,
+    keyPair,
+    spendableUtxos
+  ) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const from = txParams.from
+        const satoshisToSend = parseInt(txParams.value)
 
-  //       if (!spendableUtxos || spendableUtxos.length === 0) {
-  //         throw new Error('Insufficient funds')
-  //       }
+        if (!spendableUtxos || spendableUtxos.length === 0) {
+          throw new Error('Insufficient funds')
+        }
 
-  //       // Calculate fee
-  //       let byteCount = 0
-  //       const sortedSpendableUtxos = spendableUtxos.sort((a, b) => {
-  //         return b.satoshis - a.satoshis
-  //       })
-  //       const inputUtxos = []
-  //       let totalUtxoAmount = 0
-  //       const transactionBuilder = new SLP.TransactionBuilder('mainnet')
-  //       for (const utxo of sortedSpendableUtxos) {
-  //         if (utxo.spendable !== true) {
-  //           throw new Error('Cannot spend unspendable utxo')
-  //         }
-  //         transactionBuilder.addInput(utxo.txid, utxo.vout)
-  //         totalUtxoAmount += utxo.satoshis
-  //         inputUtxos.push(utxo)
+        // Calculate fee
+        let byteCount = 0
+        const sortedSpendableUtxos = spendableUtxos.sort((a, b) => {
+          return b.satoshis - a.satoshis
+        })
+        const inputUtxos = []
+        let totalUtxoAmount = 0
+        const transactionBuilder = new SLP.TransactionBuilder('mainnet')
+        for (const utxo of sortedSpendableUtxos) {
+          if (utxo.spendable !== true) {
+            throw new Error('Cannot spend unspendable utxo')
+          }
+          transactionBuilder.addInput(utxo.txid, utxo.vout)
+          totalUtxoAmount += utxo.satoshis
+          inputUtxos.push(utxo)
 
-  //         byteCount = SLP.BitcoinCash.getByteCount(
-  //           { P2PKH: inputUtxos.length },
-  //           { P2PKH: txParams.paymentData.outputs.length + 1 }
-  //         )
+          byteCount = SLP.BitcoinCash.getByteCount(
+            { P2PKH: inputUtxos.length },
+            { P2PKH: txParams.paymentData.outputs.length + 1 }
+          )
 
-  //         if (totalUtxoAmount >= byteCount + satoshisToSend) {
-  //           break
-  //         }
-  //       }
+          if (totalUtxoAmount >= byteCount + satoshisToSend) {
+            break
+          }
+        }
 
-  //       const satoshisRemaining = totalUtxoAmount - byteCount - satoshisToSend
+        const satoshisRemaining = totalUtxoAmount - byteCount - satoshisToSend
 
-  //       // Verify sufficient fee
-  //       if (satoshisRemaining < 0) {
-  //         throw new Error(
-  //           'Not enough Bitcoin Cash for fee. Deposit a small amount and try again.'
-  //         )
-  //       }
+        // Verify sufficient fee
+        if (satoshisRemaining < 0) {
+          throw new Error(
+            'Not enough Bitcoin Cash for fee. Deposit a small amount and try again.'
+          )
+        }
 
-  //       // Destination outputs
-  //       for (const output of txParams.paymentData.outputs) {
-  //         transactionBuilder.addOutput(
-  //           Buffer.from(output.script, 'hex'),
-  //           output.amount
-  //         )
-  //       }
+        // Destination outputs
+        for (const output of txParams.paymentData.outputs) {
+          transactionBuilder.addOutput(
+            Buffer.from(output.script, 'hex'),
+            output.amount
+          )
+        }
 
-  //       // Return remaining balance output
-  //       if (satoshisRemaining >= 546) {
-  //         transactionBuilder.addOutput(from, satoshisRemaining)
-  //       }
+        // Return remaining balance output
+        if (satoshisRemaining >= 546) {
+          transactionBuilder.addOutput(from, satoshisRemaining)
+        }
 
-  //       let redeemScript
-  //       inputUtxos.forEach((utxo, index) => {
-  //         transactionBuilder.sign(
-  //           index,
-  //           utxo.keyPair,
-  //           redeemScript,
-  //           transactionBuilder.hashTypes.SIGHASH_ALL,
-  //           utxo.satoshis
-  //         )
-  //       })
+        let redeemScript
+        inputUtxos.forEach((utxo, index) => {
+          transactionBuilder.sign(
+            index,
+            utxo.keyPair,
+            redeemScript,
+            transactionBuilder.hashTypes.SIGHASH_ALL,
+            utxo.satoshis
+          )
+        })
 
-  //       const hex = transactionBuilder.build().toHex()
+        const hex = transactionBuilder.build().toHex()
 
-  //       // send the payment transaction
-  //       var payment = new PaymentProtocol().makePayment()
-  //       payment.set(
-  //         'merchant_data',
-  //         Buffer.from(txParams.paymentData.merchantData, 'utf-8')
-  //       )
-  //       payment.set('transactions', [Buffer.from(hex, 'hex')])
+        // send the payment transaction
+        var payment = new PaymentProtocol().makePayment()
+        payment.set(
+          'merchant_data',
+          Buffer.from(txParams.paymentData.merchantData, 'utf-8')
+        )
+        payment.set('transactions', [Buffer.from(hex, 'hex')])
 
-  //       // calculate refund script pubkey
-  //       const refundPubkey = SLP.ECPair.toPublicKey(keyPair)
-  //       const refundHash160 = SLP.Crypto.hash160(Buffer.from(refundPubkey))
-  //       const refundScriptPubkey = SLP.Script.pubKeyHash.output.encode(
-  //         Buffer.from(refundHash160, 'hex')
-  //       )
+        // calculate refund script pubkey
+        const refundPubkey = SLP.ECPair.toPublicKey(keyPair)
+        const refundHash160 = SLP.Crypto.hash160(Buffer.from(refundPubkey))
+        const refundScriptPubkey = SLP.Script.pubKeyHash.output.encode(
+          Buffer.from(refundHash160, 'hex')
+        )
 
-  //       // define the refund outputs
-  //       var refundOutputs = []
-  //       var refundOutput = new PaymentProtocol().makeOutput()
-  //       refundOutput.set('amount', 0)
-  //       refundOutput.set('script', refundScriptPubkey)
-  //       refundOutputs.push(refundOutput.message)
-  //       payment.set('refund_to', refundOutputs)
-  //       payment.set('memo', '')
+        // define the refund outputs
+        var refundOutputs = []
+        var refundOutput = new PaymentProtocol().makeOutput()
+        refundOutput.set('amount', 0)
+        refundOutput.set('script', refundScriptPubkey)
+        refundOutputs.push(refundOutput.message)
+        payment.set('refund_to', refundOutputs)
+        payment.set('memo', '')
 
-  //       // serialize and send
-  //       const rawbody = payment.serialize()
-  //       const headers = {
-  //         Accept:
-  //           'application/bitcoincash-paymentrequest, application/bitcoincash-paymentack',
-  //         'Content-Type': 'application/bitcoincash-payment',
-  //         'Content-Transfer-Encoding': 'binary',
-  //       }
-  //       const response = await axios.post(
-  //         txParams.paymentData.paymentUrl,
-  //         rawbody,
-  //         {
-  //           headers,
-  //           responseType: 'blob',
-  //         }
-  //       )
+        // serialize and send
+        const rawbody = payment.serialize()
+        const headers = {
+          Accept:
+            'application/bitcoincash-paymentrequest, application/bitcoincash-paymentack',
+          'Content-Type': 'application/bitcoincash-payment',
+          'Content-Transfer-Encoding': 'binary',
+        }
+        const response = await axios.post(
+          txParams.paymentData.paymentUrl,
+          rawbody,
+          {
+            headers,
+            responseType: 'blob',
+          }
+        )
 
-  //       const responseTxHex = await this.decodePaymentResponse(response.data)
-  //       const txid = this.txidFromHex(responseTxHex)
+        const responseTxHex = await this.decodePaymentResponse(response.data)
+        const txid = this.txidFromHex(responseTxHex)
 
-  //       resolve(txid)
-  //     } catch (err) {
-  //       reject(err)
-  //     }
-  //   })
-  // }
+        resolve(txid)
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
 
   static signAndPublishSlpTransaction (
     txParams,
@@ -379,6 +379,14 @@ class BitboxUtils {
     return new Promise(async (resolve, reject) => {
       try {
         const from = txParams.from
+        // Get to addresses from payment request
+        if(!txParams.to && txParams.paymentRequestUrl) {
+          txParams.to = []
+          let outputs = txParams.paymentData.outputs
+          for(let i = 1; i < outputs.length; i++) {
+            txParams.to.push(bitbox.Address.fromOutputScript(Buffer.from(outputs[i].script, 'hex')))
+          }
+        }
         const to = txParams.to
         const tokenDecimals = tokenMetadata.decimals
         const scaledTokenSendAmount = new BigNumber(
@@ -391,7 +399,7 @@ class BitboxUtils {
             'Amount below minimum for this token. Increase the send amount and try again.'
           )
         }
-
+        
         const sortedSpendableTokenUtxos = spendableTokenUtxos.sort((a, b) => {
           const aQuantity = new BigNumber(a.slp.quantity)
           const bQuantity = new BigNumber(b.slp.quantity)
@@ -411,7 +419,7 @@ class BitboxUtils {
             break
           }
         }
-
+        
         if (!tokenBalance.gte(tokenSendAmount)) {
           throw new Error('Insufficient tokens')
         }
@@ -419,20 +427,24 @@ class BitboxUtils {
         const tokenChangeAmount = tokenBalance.minus(tokenSendAmount)
 
         let sendOpReturn
+        // Handle multi-output SLP
+        let tokenSendArray = txParams.valueArray ? 
+          txParams.valueArray.map(num => new BigNumber(num)) : [tokenSendAmount]
 
         if (tokenChangeAmount.isGreaterThan(0)) {
+          tokenSendArray.push(tokenChangeAmount)
           sendOpReturn = SLPJS.buildSendOpReturn({
             tokenIdHex: txParams.sendTokenData.tokenId,
-            outputQtyArray: [tokenSendAmount, tokenChangeAmount],
+            outputQtyArray: tokenSendArray,
           })
         } else {
           sendOpReturn = SLPJS.buildSendOpReturn({
             tokenIdHex: txParams.sendTokenData.tokenId,
-            outputQtyArray: [tokenSendAmount],
+            outputQtyArray: tokenSendArray,
           })
         }
 
-        const tokenReceiverAddressArray = [to]
+        const tokenReceiverAddressArray = Array.isArray(to) ? to.slice(0) : [to]
         if (tokenChangeAmount.isGreaterThan(0)) {
           tokenReceiverAddressArray.push(tokenChangeAddress)
         }
@@ -459,7 +471,7 @@ class BitboxUtils {
             break
           }
         }
-
+        
         const transactionBuilder = new bitbox.TransactionBuilder('mainnet')
         let totalUtxoAmount = 0
         inputUtxos.forEach(utxo => {
@@ -475,18 +487,26 @@ class BitboxUtils {
             'Not enough Bitcoin Cash for fee. Deposit a small amount and try again.'
           )
         }
-
+        
         // SLP data output
         transactionBuilder.addOutput(sendOpReturn, 0)
-
+        
         // Token destination output
-        transactionBuilder.addOutput(to, 546)
+        if(to) {
+          if(Array.isArray(to)) {
+            for(const addr of to) {
+              transactionBuilder.addOutput(addr, 546)
+            }
+          } else {
+            transactionBuilder.addOutput(to, 546)
+          }
+        }
 
         // Return remaining token balance output
         if (tokenChangeAmount.isGreaterThan(0)) {
           transactionBuilder.addOutput(tokenChangeAddress, 546)
         }
-
+        
         // Return remaining bch balance output
         transactionBuilder.addOutput(from, satoshisRemaining + 546)
 
@@ -502,10 +522,70 @@ class BitboxUtils {
         })
 
         const hex = transactionBuilder.build().toHex()
+        // Define txid
+        var txid
+        
+        // Begin BIP70 SLP
+        if (txParams.paymentRequestUrl) {
+          // send the payment transaction
+          var payment = new PaymentProtocol().makePayment()
+          payment.set(
+            'merchant_data',
+            Buffer.from(txParams.paymentData.merchantData, 'utf-8')
+          )
+          payment.set('transactions', [Buffer.from(hex, 'hex')])
 
-        const txid = await this.publishTx(hex)
+          // calculate refund script pubkey from change address
+          //const refundPubkey = SLP.ECPair.toPublicKey(keyPair)
+          //const refundHash160 = SLP.Crypto.hash160(Buffer.from(refundPubkey))
+          const addressType = SLP.Address.detectAddressType(tokenChangeAddress)
+          const addressFormat = SLP.Address.detectAddressFormat(tokenChangeAddress)
+          var refundHash160 = SLP.Address.cashToHash160(tokenChangeAddress)
+          var encodingFunc = SLP.Script.pubKeyHash.output.encode
+          if (addressType == 'p2sh')
+            encodingFunc = SLP.Script.scriptHash.output.encode
+          if (addressFormat == 'legacy')
+            refundHash160 = SLP.Address.legacyToHash160(tokenChangeAddress)
+          const refundScriptPubkey = encodingFunc(
+            Buffer.from(refundHash160, 'hex')
+          )
+
+          // define the refund outputs
+          var refundOutputs = []
+          var refundOutput = new PaymentProtocol().makeOutput()
+          refundOutput.set('amount', 0)
+          refundOutput.set('script', refundScriptPubkey)
+          refundOutputs.push(refundOutput.message)
+          payment.set('refund_to', refundOutputs)
+          payment.set('memo', '')
+
+          // serialize and send
+          const rawbody = payment.serialize()
+          const headers = {
+            Accept:
+              'application/simpleledger-paymentrequest, application/simpleledger-paymentack',
+            'Content-Type': 'application/simpleledger-payment',
+            'Content-Transfer-Encoding': 'binary',
+          }
+          const response = await axios.post(
+            txParams.paymentData.paymentUrl,
+            rawbody,
+            {
+              headers,
+              responseType: 'blob',
+            }
+          )
+
+          const responseTxHex = await this.decodePaymentResponse(response.data)
+          txid = this.txidFromHex(responseTxHex)
+        } else {
+          // Standard SLP
+          txid = await this.publishTx(hex)
+        }
+
         resolve(txid)
       } catch (err) {
+        console.log(err)
         reject(err)
       }
     })
