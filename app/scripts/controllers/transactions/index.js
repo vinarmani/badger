@@ -175,7 +175,11 @@ class TransactionController extends EventEmitter {
           detailsData.memo = details.get('memo')
           detailsData.paymentUrl = details.get('payment_url')
           const merchantData = details.get('merchant_data')
-          detailsData.merchantData = merchantData.toString()
+          try {
+            detailsData.merchantData = JSON.parse(merchantData.toString())
+          } catch (e) {
+            detailsData.merchantData = merchantData.toString()
+          }
           detailsData.requiredFeeRate = details.get('required_fee_rate')
 
           // Parse outputs as number amount and hex string script
@@ -192,6 +196,10 @@ class TransactionController extends EventEmitter {
             totalValue += output.amount
           }
           detailsData.totalValue = totalValue
+          // If a specific exact amount is specified, use that
+          if (detailsData.merchantData.exact_amount)
+          detailsData.totalValue = detailsData.merchantData.exact_amount
+
           resolve(detailsData)
         } catch (ex) {
           reject(ex)
@@ -216,6 +224,10 @@ class TransactionController extends EventEmitter {
         'Accept': 'application/bitcoincash-paymentrequest',
         'Content-Type': 'application/octet-stream',
       }
+
+      // Is one side of a contract?
+      if(txParams.partyHash)
+        headers.partyhash = txParams.partyHash
       
       // Assume BCH, but fail over to SLP
       var paymentResponse
@@ -260,7 +272,40 @@ class TransactionController extends EventEmitter {
 
         txParams.valueArray = decodedScriptArray.map(decoded => decoded.quantity)
       }
-      
+
+      // Handle Contract / Exact Amount
+      if(txParams.paymentData.merchantData.contract && txParams.paymentData.merchantData.exact_amount) {
+        let p2shOuts = 0
+        let p2pkhOuts = 0
+        txParams.paymentData.outputs = txParams.paymentData.outputs.map(function getAddr(output){
+          let outputAddr = bitboxUtils.addressFromOutputScript(Buffer.from(output.script, 'hex'))
+          output.type = txUtils.detectAddressType(outputAddr)
+          if(output.type == 'p2pkh')
+            p2pkhOuts += 1
+          if(output.type == 'p2sh')
+            p2shOuts += 1
+          return output
+        })
+        let byteCount = bitboxUtils.getByteCount({ P2PKH: 1 }, { P2SH: p2shOuts, P2PKH: p2pkhOuts })
+        let exactChangeTxParams = {
+          to: this.getSelectedAddress(),
+          value: Number(byteCount) + Number(txParams.paymentData.merchantData.exact_amount)
+        }
+        // Create and send splitter tx
+        const exactTxMeta = await this.addUnapprovedTransaction(exactChangeTxParams)
+        exactTxMeta.origin = opts.origin
+        this.txStateManager.updateTx(
+          exactTxMeta,
+          '#newUnapprovedTransaction - adding the origin'
+        )
+        let txid = await this.approveTransaction(exactTxMeta.id)
+        // console.log('txid', txid)
+        // Isolate UTXO to be spent
+        txParams.paymentData.exactUtxo = {
+          txid: txid,
+          vout: 0
+        }
+      }
     }
 
     const initialTxMeta = await this.addUnapprovedTransaction(txParams)
@@ -269,6 +314,7 @@ class TransactionController extends EventEmitter {
       initialTxMeta,
       '#newUnapprovedTransaction - adding the origin'
     )
+    // console.log(initialTxMeta)
     // listen for tx completion (success, fail)
     return new Promise((resolve, reject) => {
       this.txStateManager.once(
@@ -426,7 +472,7 @@ class TransactionController extends EventEmitter {
       // add nonce debugging information to txMeta
       this.txStateManager.updateTx(txMeta, 'transactions#approveTransaction')
       // sign transaction
-      await this.signAndPublishTransaction(txId)
+      const txid = await this.signAndPublishTransaction(txId)
 
       this.confirmTransaction(txId)
 
@@ -436,6 +482,8 @@ class TransactionController extends EventEmitter {
         () => this.accountTracker._updateAccount(txMeta.txParams.to),
         6000
       )
+
+      return txid
 
       // TODO: split signAndPublish method
       // const rawTx = await this.signTransaction(txId)
@@ -543,6 +591,8 @@ class TransactionController extends EventEmitter {
 
     this.setTxHash(txId, txHash)
     this.txStateManager.setTxStatusSubmitted(txId)
+
+    return txHash
   }
 
   /**

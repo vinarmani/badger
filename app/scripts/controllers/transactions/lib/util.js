@@ -5,6 +5,7 @@
 const BigNumber = require('bignumber.js')
 const bchaddr = require('bchaddrjs-slp')
 const bitboxUtils = require('../bitbox-utils')
+const detectAddressType = bchaddr.detectAddressType
 
 module.exports = {
   normalizeTxParams,
@@ -12,6 +13,7 @@ module.exports = {
   validateFrom,
   validateRecipient,
   getFinalStates,
+  detectAddressType
 }
 
  /**

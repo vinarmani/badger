@@ -10,6 +10,12 @@ const axios = require('axios')
 const toBuffer = require('blob-to-buffer')
 
 class BitboxUtils {
+  static getByteCount = SLP.BitcoinCash.getByteCount
+
+  static addressFromOutputScript(scriptBuffer) {
+    return SLP.Address.fromOutputScript(scriptBuffer)
+  }
+
   static async getLargestUtxo (address) {
     return new Promise((resolve, reject) => {
       SLP.Address.utxo(address).then(
@@ -252,6 +258,12 @@ class BitboxUtils {
         const from = txParams.from
         const satoshisToSend = parseInt(txParams.value)
 
+        if(txParams.paymentData.exactUtxo) {
+          let exactUtxo = txParams.paymentData.exactUtxo
+          spendableUtxos = spendableUtxos.filter(utxo => 
+            utxo.txid === exactUtxo.txid && utxo.vout === exactUtxo.vout)
+        }
+
         if (!spendableUtxos || spendableUtxos.length === 0) {
           throw new Error('Insufficient funds')
         }
@@ -272,9 +284,24 @@ class BitboxUtils {
           totalUtxoAmount += utxo.satoshis
           inputUtxos.push(utxo)
 
+          let byteOutObj = { P2PKH: txParams.paymentData.outputs.length + 1 }
+
+          // Handle exactAmount
+          if(txParams.paymentData.merchantData.exact_amount) {
+            let p2pkhNumOuts = txParams.paymentData.outputs.reduce(function(acc, out) {
+              let amount = out.type == 'p2pkh' ? 1 : 0
+              return acc + amount
+            },0)
+            let p2shNumOuts = txParams.paymentData.outputs.reduce(function(acc, out) {
+              let amount = out.type == 'p2sh' ? 1 : 0
+              return acc + amount
+            },0)
+            byteOutObj = { P2PKH: p2pkhNumOuts, P2SH: p2shNumOuts}
+          }
+
           byteCount = SLP.BitcoinCash.getByteCount(
             { P2PKH: inputUtxos.length },
-            { P2PKH: txParams.paymentData.outputs.length + 1 }
+            byteOutObj
           )
 
           if (totalUtxoAmount >= byteCount + satoshisToSend) {
@@ -304,13 +331,18 @@ class BitboxUtils {
           transactionBuilder.addOutput(from, satoshisRemaining)
         }
 
+        let sighashType = transactionBuilder.hashTypes.SIGHASH_ALL
+
+        if(txParams.paymentData.merchantData.anyonecanpay)
+          sighashType = (transactionBuilder.hashTypes.SIGHASH_ALL | transactionBuilder.hashTypes.SIGHASH_ANYONECANPAY)
+
         let redeemScript
         inputUtxos.forEach((utxo, index) => {
           transactionBuilder.sign(
             index,
             utxo.keyPair,
             redeemScript,
-            transactionBuilder.hashTypes.SIGHASH_ALL,
+            sighashType,
             utxo.satoshis
           )
         })
@@ -321,7 +353,7 @@ class BitboxUtils {
         var payment = new PaymentProtocol().makePayment()
         payment.set(
           'merchant_data',
-          Buffer.from(txParams.paymentData.merchantData, 'utf-8')
+          Buffer.from(JSON.stringify(txParams.paymentData.merchantData), 'utf-8')
         )
         payment.set('transactions', [Buffer.from(hex, 'hex')])
 
@@ -349,6 +381,10 @@ class BitboxUtils {
           'Content-Type': 'application/bitcoincash-payment',
           'Content-Transfer-Encoding': 'binary',
         }
+
+        if(txParams.partyHash)
+          headers.partyhash = txParams.partyHash
+
         const response = await axios.post(
           txParams.paymentData.paymentUrl,
           rawbody,
@@ -357,7 +393,7 @@ class BitboxUtils {
             responseType: 'blob',
           }
         )
-
+        
         const responseTxHex = await this.decodePaymentResponse(response.data)
         const txid = this.txidFromHex(responseTxHex)
 
