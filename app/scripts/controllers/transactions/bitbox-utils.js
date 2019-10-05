@@ -258,12 +258,6 @@ class BitboxUtils {
         const from = txParams.from
         const satoshisToSend = parseInt(txParams.value)
 
-        if(txParams.paymentData.exactUtxo) {
-          let exactUtxo = txParams.paymentData.exactUtxo
-          spendableUtxos = spendableUtxos.filter(utxo => 
-            utxo.txid === exactUtxo.txid && utxo.vout === exactUtxo.vout)
-        }
-
         if (!spendableUtxos || spendableUtxos.length === 0) {
           throw new Error('Insufficient funds')
         }
@@ -348,7 +342,6 @@ class BitboxUtils {
         })
 
         const hex = transactionBuilder.build().toHex()
-
         // send the payment transaction
         var payment = new PaymentProtocol().makePayment()
         payment.set(

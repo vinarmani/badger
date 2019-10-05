@@ -243,7 +243,7 @@ class AccountTracker {
     return balance
   }
 
-  async _getSlpTokens (address) {
+  async _getSlpTokens (address, justUtxos = false) {
     const rtnTokens = []
     let bchBalanceSatoshis = 0
 
@@ -252,6 +252,7 @@ class AccountTracker {
       const accountUtxoCache = Object.assign({}, mutableAccountUtxoCache)
       if (!accountUtxoCache[address]) accountUtxoCache[address] = []
       const allCurrentUtxos = await bitboxUtils.getAllUtxo(address)
+      const quarantinedUtxos = this.store.getState().quarantine
 
       // Remove spent utxos from cache
       accountUtxoCache[address] = accountUtxoCache[address].filter(
@@ -281,6 +282,21 @@ class AccountTracker {
           )
         })
       })
+
+
+      // Remove quarantined utxos from cache
+      if(quarantinedUtxos) {
+        accountUtxoCache[address] = accountUtxoCache[address].filter(
+          cachedUtxo => {
+            return !quarantinedUtxos.some(quarantinedUtxo => {
+              return (
+                quarantinedUtxo.txid === cachedUtxo.txid &&
+                quarantinedUtxo.vout === cachedUtxo.vout
+              )
+            })
+          }
+        )
+      }
 
       // Add txDetails to uncached utxos
       const txIds = uncachedUtxos.map(i => i.txid)
@@ -379,6 +395,9 @@ class AccountTracker {
           )
         }
       }
+
+      if(justUtxos)
+        return accountUtxoCache[address]
 
       // loop through UTXO set and accumulate balances for each valid token.
       const bals = {
@@ -512,6 +531,24 @@ class AccountTracker {
     return balance
   }
 
+
+  _quarantineUtxo (utxoArray) {
+    let { quarantine } = this.store.getState()
+    if (!quarantine)
+      quarantine = []
+    if (!quarantine.includes(utxoArray)) {
+      Array.prototype.push.apply(quarantine, utxoArray)
+      this.store.updateState({ quarantine })
+    }
+    return quarantine
+  }
+
+  _clearQuarantine () {
+    const quarantine = []
+    this.store.updateState( {quarantine} )
+  }
+
+  
   async _updateHistoricalTransactions (address) {
     try {
       await this._updateHistoricalBchTransactions(address)

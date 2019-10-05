@@ -125,6 +125,11 @@ class TransactionController extends EventEmitter {
     this.txStateManager.wipeTransactions(address)
   }
 
+  pause = function(milliseconds) {
+    var dt = new Date();
+    while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
+  }
+
   // TODO: Payment requests
   async decodePaymentRequest (requestData) {
     return new Promise((resolve, reject) => {
@@ -275,6 +280,7 @@ class TransactionController extends EventEmitter {
 
       // Handle Contract / Exact Amount
       if(txParams.paymentData.merchantData.contract && txParams.paymentData.merchantData.exact_amount) {
+        txParams.paymentData.fragment = true
         let p2shOuts = 0
         let p2pkhOuts = 0
         txParams.paymentData.outputs = txParams.paymentData.outputs.map(function getAddr(output){
@@ -298,13 +304,8 @@ class TransactionController extends EventEmitter {
           exactTxMeta,
           '#newUnapprovedTransaction - adding the origin'
         )
-        let txid = await this.approveTransaction(exactTxMeta.id)
-        // console.log('txid', txid)
-        // Isolate UTXO to be spent
-        txParams.paymentData.exactUtxo = {
-          txid: txid,
-          vout: 0
-        }
+
+        txParams.exactId = exactTxMeta.id
       }
     }
 
@@ -469,6 +470,18 @@ class TransactionController extends EventEmitter {
       const txMeta = this.txStateManager.getTx(txId)
       const fromAddress = txMeta.txParams.from
 
+      // Handle exact UTXO scenario
+      if(txMeta.txParams.exactId) {
+        console.log('unapprovedSplitter', this.txStateManager.getTx(txMeta.txParams.exactId))
+        let exactTxId = await this.approveTransaction(txMeta.txParams.exactId)
+        console.log('txid', exactTxId)
+        // Isolate UTXO to be spent
+        this.pause(2000)
+        let newUtxos = await this.accountTracker._getSlpTokens(fromAddress, true)
+        txMeta.txParams.paymentData.exactUtxo = newUtxos.filter(utxo => 
+          utxo.txid === exactTxId && utxo.vout === 0)
+      }
+
       // add nonce debugging information to txMeta
       this.txStateManager.updateTx(txMeta, 'transactions#approveTransaction')
       // sign transaction
@@ -477,11 +490,13 @@ class TransactionController extends EventEmitter {
       this.confirmTransaction(txId)
 
       // Update balances
-      setTimeout(() => this.accountTracker._updateAccount(fromAddress), 3000)
-      setTimeout(
-        () => this.accountTracker._updateAccount(txMeta.txParams.to),
-        6000
-      )
+      if(!txMeta.txParams.exactId) {
+        setTimeout(() => this.accountTracker._updateAccount(fromAddress), 3000)
+        setTimeout(
+          () => this.accountTracker._updateAccount(txMeta.txParams.to),
+          6000
+        )
+      }
 
       return txid
 
@@ -497,6 +512,7 @@ class TransactionController extends EventEmitter {
         // log.error(err)
       }
       // continue with error chain
+      console.error(err)
       throw err
     }
   }
@@ -516,9 +532,15 @@ class TransactionController extends EventEmitter {
     const slpKeyPair = await this.exportKeyPair(slpAddress)
 
     const accountUtxoCache = Object.assign({}, this.getAccountUtxoCache())
-    const utxoCache = accountUtxoCache[txParams.from]
+    let utxoCache = accountUtxoCache[txParams.from]
     const slpUtxoCache = accountUtxoCache[slpAddress]
+    const quarantinedUtxos = this.getQuarantinedUtxos()
     let spendableUtxos = []
+
+    if(txParams.paymentData) {
+      if(txParams.paymentData.exactUtxo)
+        utxoCache = txParams.paymentData.exactUtxo
+    }
 
     if (utxoCache && utxoCache.length) {
       // Filter spendable utxos and map keypair to utxo
@@ -529,6 +551,22 @@ class TransactionController extends EventEmitter {
         return utxo
       })
     }
+
+    // Remove quarantined utxos from spendable list
+    if(quarantinedUtxos) {
+      spendableUtxos = spendableUtxos.filter(
+        spendableUtxo => {
+          return !quarantinedUtxos.some(quarantinedUtxo => {
+            return (
+              quarantinedUtxo.txid === spendableUtxo.txid &&
+              quarantinedUtxo.vout === spendableUtxo.vout
+            )
+          })
+        }
+      )
+    }
+
+    console.log('processedUtxo', spendableUtxos)
 
     if (slpUtxoCache && slpUtxoCache.length) {
       // Filter spendable SLP utxos and map keypair to utxo
@@ -588,7 +626,6 @@ class TransactionController extends EventEmitter {
         spendableUtxos
       )
     }
-
     this.setTxHash(txId, txHash)
     this.txStateManager.setTxStatusSubmitted(txId)
 
@@ -652,6 +689,11 @@ class TransactionController extends EventEmitter {
     // Add the tx hash to the persisted meta-tx object
     const txMeta = this.txStateManager.getTx(txId)
     txMeta.hash = txHash
+    if(txMeta.txParams.paymentData && txMeta.txParams.paymentData.exactUtxo) {
+      let quarantined = this.accountTracker._quarantineUtxo(txMeta.txParams.paymentData.exactUtxo)
+      console.log('quarantined', quarantined)
+      delete txMeta.txParams.paymentData.exactUtxo
+    }
     this.txStateManager.updateTx(txMeta, 'transactions#setTxHash')
   }
 
@@ -674,6 +716,9 @@ class TransactionController extends EventEmitter {
     /** @returns the utxo cache for accounts */
     this.getAccountUtxoCache = () =>
       this.accountTrackerStore.getState().accountUtxoCache
+    /** @returns quarantined utxos */
+    this.getQuarantinedUtxos = () =>
+      this.accountTrackerStore.getState().quarantine
     /** @returns the token metadata cache */
     this.getTokenMetadataCache = () =>
       this.accountTrackerStore.getState().tokenCache
