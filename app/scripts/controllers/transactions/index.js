@@ -383,7 +383,9 @@ class TransactionController extends EventEmitter {
     })
     this.addTx(txMeta)
 
-    this.emit('newUnapprovedTx', txMeta)
+    // Only emit once in the case of exact_amount double broadcast (no duplicate window)
+    if(!txParams.exactId)
+      this.emit('newUnapprovedTx', txMeta)
 
     txMeta.loadingDefaults = false
     // save txMeta

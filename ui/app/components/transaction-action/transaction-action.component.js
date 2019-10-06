@@ -32,6 +32,9 @@ export default class TransactionAction extends PureComponent {
     const { transaction, methodData, actionPrefix, tokenSymbol } = this.props
     const { data, done } = methodData
 
+    if (transaction.txParams.partyHash && transaction.txParams.toAddresses)
+      this.setState({ transactionAction: 'Wager' })
+
     if (!done || transactionAction) {
       return
     }

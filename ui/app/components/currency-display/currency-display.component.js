@@ -9,7 +9,7 @@ export default class CurrencyDisplay extends PureComponent {
     prefix: PropTypes.string,
     // Used in container
     currency: PropTypes.oneOf([BCH]),
-    denomination: PropTypes.oneOf([GWEI]),
+    denomination: PropTypes.oneOf([BCH]),
     value: PropTypes.string,
     numberOfDecimals: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     hideLabel: PropTypes.bool,

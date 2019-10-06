@@ -2,6 +2,7 @@ import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types'
 import TransactionListItem from '../transaction-list-item'
 import Button from '../button/button.component'
+import { txidFromHex } from '../../../../app/scripts/controllers/transactions/bitbox-utils'
 
 export default class TransactionList extends PureComponent {
   static contextTypes = {
@@ -46,6 +47,29 @@ export default class TransactionList extends PureComponent {
     // return id === transactionToRetry.id && Date.now() - submittedTime > 30000
   }
 
+  findContracts (completedTransactions) {
+    // Get relevant data to spend contract and put it into transaction
+    let formattedTransactions = completedTransactions.map(function (transaction, index, txArray){
+      let contractAddrs = transaction.txParams.toAddresses
+      if (contractAddrs) {
+        if (contractAddrs[0].includes('bitcoincash:p')) {
+          let previousTx = txArray[index + 1]
+          if(previousTx.txParams.paymentData 
+            && previousTx.txParams.paymentData.merchantData 
+            && previousTx.txParams.paymentData.merchantData.contract) {
+              transaction.txParams.partyHash = previousTx.txParams.partyHash
+              transaction.txParams.contract = previousTx.txParams.paymentData.merchantData.contract
+              transaction.txParams.value = previousTx.txParams.value
+              // Remove exact change Tx
+              txArray.splice((index + 1), 1)
+            }
+        }
+      }
+      return transaction
+    })
+    return formattedTransactions
+  }
+
   renderTransactions () {
     const { t } = this.context
     const {
@@ -53,6 +77,11 @@ export default class TransactionList extends PureComponent {
       completedTransactions = [],
       selectedAddress,
     } = this.props
+
+    // Format with contract info
+    const formattedTransactions = this.findContracts(completedTransactions)
+
+    console.log('formattedTransactions', formattedTransactions)
 
     return (
       <div className="transaction-list__transactions">
@@ -68,8 +97,8 @@ export default class TransactionList extends PureComponent {
         )}
         <div className="transaction-list__completed-transactions">
           <div className="transaction-list__header">{t('history')}</div>
-          {completedTransactions.length > 0
-            ? completedTransactions.map((transaction, index) =>
+          {formattedTransactions.length > 0
+            ? formattedTransactions.map((transaction, index) =>
                 this.renderTransaction(transaction, index)
               )
             : this.renderEmpty()}
