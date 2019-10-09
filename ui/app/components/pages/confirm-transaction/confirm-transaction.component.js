@@ -49,6 +49,12 @@ export default class ConfirmTransaction extends Component {
       confirmTransaction: { txData: { id: transactionId } = {} },
     } = this.props
 
+    let txParams = {}
+    if (this.props.location.state)
+      txParams = this.props.location.state.txParams
+
+    this.setState({txParams:txParams})
+
     if (!totalUnapprovedCount && !send.to) {
       history.replace(DEFAULT_ROUTE)
       return

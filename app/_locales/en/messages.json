@@ -949,6 +949,9 @@
   "sendETH": {
     "message": "Send BCH"
   },
+  "getWager": {
+    "message": "Spend Winnings"
+  },
   "sendTokens": {
     "message": "Send Tokens"
   },
@@ -963,6 +966,9 @@
   },
   "onlySendToEtherAddress": {
     "message": "Only send BCH to a Bitcoin Cash address."
+  },
+  "collectWinnings": {
+    "message": "Collect your winnings, if available."
   },
   "onlySendTokensToAccountAddress": {
     "message": "Only send $1 to a Simple Ledger address.",

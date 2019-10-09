@@ -12,6 +12,7 @@ const log = require('loglevel')
 const InitializeScreen = require('../../mascara/src/app/first-time').default
 // accounts
 const SendTransactionScreen = require('./components/send/send.container')
+const WagerTransactionScreen = require('./components/wager/send.container')
 const ConfirmTransaction = require('./components/pages/confirm-transaction')
 
 // slideout menu
@@ -57,6 +58,7 @@ const {
   CONFIRM_ADD_SUGGESTED_TOKEN_ROUTE,
   NEW_ACCOUNT_ROUTE,
   SEND_ROUTE,
+  WAGER_ROUTE,
   CONFIRM_TRANSACTION_ROUTE,
   INITIALIZE_ROUTE,
   NOTICE_ROUTE,
@@ -111,6 +113,11 @@ class App extends Component {
         path: SEND_ROUTE,
         exact,
         component: SendTransactionScreen,
+      }),
+      h(Authenticated, {
+        path: WAGER_ROUTE,
+        exact,
+        component: WagerTransactionScreen,
       }),
       h(Authenticated, {
         path: ADD_TOKEN_ROUTE,

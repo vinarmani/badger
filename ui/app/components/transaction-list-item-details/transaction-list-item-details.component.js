@@ -7,7 +7,7 @@ import TransactionBreakdown from '../transaction-breakdown'
 import Button from '../button'
 import prefixForNetwork from '../../../lib/etherscan-prefix-for-network'
 const TransactionController = require('../../../../app/scripts/controllers/transactions')
-import { SEND_ROUTE } from '../../routes'
+import { SEND_ROUTE, WAGER_ROUTE } from '../../routes'
 import { CONFIRM_TRANSACTION_ROUTE } from '../../routes'
 
 export default class TransactionListItemDetails extends PureComponent {
@@ -64,8 +64,8 @@ export default class TransactionListItemDetails extends PureComponent {
               <Button
                 type="raised"
                 onClick={() => history.push({
-                  pathname:SEND_ROUTE,
-                  state:{txParams:transaction}
+                  pathname:WAGER_ROUTE,
+                  state:{txParams:transaction.txParams}
                 })}
                 className="transaction-list-item-details__header-button"
               >

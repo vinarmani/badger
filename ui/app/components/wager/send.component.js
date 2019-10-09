@@ -8,9 +8,9 @@ import {
   doesAmountErrorRequireUpdate,
 } from './send.utils'
 
-import SendHeader from './send-header/'
-import SendContent from './send-content/'
-import SendFooter from './send-footer/'
+import SendHeader from './send-header'
+import SendContent from './send-content'
+import SendFooter from './send-footer'
 
 export default class SendTransactionScreen extends PersistentForm {
   static propTypes = {
@@ -164,6 +164,7 @@ export default class SendTransactionScreen extends PersistentForm {
   }
 
   componentWillMount () {
+    console.log('in wager version')
     const {
       from: { address },
       selectedToken,
@@ -193,7 +194,15 @@ export default class SendTransactionScreen extends PersistentForm {
   }
 
   render () {
-    const { history, showHexData, selectedToken } = this.props
+    const { 
+      history, 
+      showHexData, 
+      selectedToken, 
+    } = this.props
+
+    let txParams = {}
+    if (this.props.location.state)
+      txParams = this.props.location.state.txParams
 
     return (
       <div className="page-container">
@@ -204,7 +213,10 @@ export default class SendTransactionScreen extends PersistentForm {
           showHexData={showHexData}
           selectedToken={selectedToken}
         />
-        <SendFooter history={history} />
+        <SendFooter 
+          history={history}
+          txParams={txParams}
+        />
       </div>
     )
   }
