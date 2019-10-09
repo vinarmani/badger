@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import SendRowWrapper from '../send-row-wrapper'
 import EnsInput from '../../../ens-input'
+import ReadOnlyInput from '../../../readonly-input'
 import { getToErrorObject } from './send-to-row.utils.js'
 
 export default class SendToRow extends Component {
@@ -14,6 +15,7 @@ export default class SendToRow extends Component {
     toAccounts: PropTypes.array,
     toDropdownOpen: PropTypes.bool,
     updateSendTo: PropTypes.func,
+    updateSignature: PropTypes.func,
     updateSendToError: PropTypes.func,
     scanQrCode: PropTypes.func,
     tokenContract: PropTypes.object,
@@ -45,6 +47,11 @@ export default class SendToRow extends Component {
     }
   }
 
+  handleSignatureChange (e) {
+    const {updateSignature} = this.props
+    updateSignature(e.target.value)
+  }
+
   render () {
     const {
       closeToDropdown,
@@ -59,24 +66,10 @@ export default class SendToRow extends Component {
     return (
       <SendRowWrapper
         errorType={'to'}
-        label={`${this.context.t('to')}: `}
+        label={'Referee Signature'}
         showError={inError}
       >
-        <EnsInput
-          scanQrCode={_ => this.props.scanQrCode()}
-          accounts={toAccounts}
-          closeDropdown={() => closeToDropdown()}
-          dropdownOpen={toDropdownOpen}
-          inError={inError}
-          name={'address'}
-          network={network}
-          onChange={({ toAddress, nickname, toError }) =>
-            this.handleToChange(toAddress, nickname, toError)
-          }
-          openDropdown={() => openToDropdown()}
-          placeholder={this.context.t('recipientAddress')}
-          to={to}
-        />
+      <input onChange={e => this.handleSignatureChange(e)} />
       </SendRowWrapper>
     )
   }

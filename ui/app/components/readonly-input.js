@@ -9,6 +9,14 @@ function ReadOnlyInput () {
   Component.call(this)
 }
 
+ReadOnlyInput.prototype.componentDidUpdate = function () {
+  //this.props.onChange(this.props.value)
+}
+
+ReadOnlyInput.prototype.handleChange - function (e) {
+  this.props.onChange(e.target.value);
+}
+
 ReadOnlyInput.prototype.render = function () {
   const {
     wrapperClass = '',
@@ -24,8 +32,9 @@ ReadOnlyInput.prototype.render = function () {
     h(inputType, {
       className: inputClass,
       value,
-      readOnly: true,
+      readOnly: false,
       onFocus: event => event.target.select(),
+      onChange: this.handleChange,
       onClick,
     }),
   ])

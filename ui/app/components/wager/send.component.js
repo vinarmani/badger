@@ -13,6 +13,16 @@ import SendContent from './send-content'
 import SendFooter from './send-footer'
 
 export default class SendTransactionScreen extends PersistentForm {
+  constructor(props) {
+    // Required step: always call the parent class' constructor
+    super(props);
+
+    // Set the state directly. Use props if necessary.
+    this.state = {
+      refereeSig: null
+    }
+  }
+
   static propTypes = {
     amount: PropTypes.string,
     amountConversionRate: PropTypes.oneOfType([
@@ -86,6 +96,11 @@ export default class SendTransactionScreen extends PersistentForm {
       to: getToAddressForGasUpdate(updatedToAddress, currentToAddress),
       value: value || amount,
     })
+  }
+
+  updateRefereeSignature (signature) {
+    this.setState({refereeSig:signature})
+    this.props.location.state.txParams.refereeSig = signature
   }
 
   componentDidUpdate (prevProps) {
@@ -200,9 +215,15 @@ export default class SendTransactionScreen extends PersistentForm {
       selectedToken, 
     } = this.props
 
+    const {refereeSig} = this.state
+
     let txParams = {}
-    if (this.props.location.state)
+    if (this.props.location.state) {
       txParams = this.props.location.state.txParams
+      txParams.refereeSig = refereeSig
+    }
+
+    console.log('txParams to footer', txParams)
 
     return (
       <div className="page-container">
@@ -212,6 +233,7 @@ export default class SendTransactionScreen extends PersistentForm {
           scanQrCode={_ => this.props.scanQrCode()}
           showHexData={showHexData}
           selectedToken={selectedToken}
+          updateSignature={sig => this.updateRefereeSignature(sig)}
         />
         <SendFooter 
           history={history}
