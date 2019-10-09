@@ -50,6 +50,7 @@ export default class TransactionList extends PureComponent {
   findContracts (completedTransactions) {
     // Get relevant data to spend contract and put it into transaction
     let formattedTransactions = completedTransactions.map(function (transaction, index, txArray){
+      transaction.txParams.value = String(transaction.txParams.value)
       let contractAddrs = transaction.txParams.toAddresses
       if (contractAddrs) {
         if (contractAddrs[0].includes('bitcoincash:p')) {
@@ -67,7 +68,11 @@ export default class TransactionList extends PureComponent {
       }
       return transaction
     })
-    return formattedTransactions
+    return formattedTransactions.filter(function(transaction){
+      if(transaction.txParams.to && transaction.txParams.from)
+        return !(transaction.txParams.to == transaction.txParams.from)
+      return true
+    })
   }
 
   renderTransactions () {
@@ -78,8 +83,13 @@ export default class TransactionList extends PureComponent {
       selectedAddress,
     } = this.props
 
+    let formattedTransactions
     // Format with contract info
-    const formattedTransactions = this.findContracts(completedTransactions)
+    try {
+      formattedTransactions = this.findContracts(completedTransactions)
+    } catch (e) {
+      formattedTransactions = completedTransactions
+    }
 
     console.log('formattedTransactions', formattedTransactions)
 

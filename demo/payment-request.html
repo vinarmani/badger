@@ -4,7 +4,7 @@
   <p>BIP 70 Payment Request</p>
   <p><button
     class="badger-button"
-    data-payment-request-url="https://pay.bitcoin.com/i/EznTwQ1vTo7T24XXFKCYqE"
+    data-payment-request-url="https://pay.bitcoin.com/i/6qAbhquBgsMcijBNCAJNzW"
     data-paywall-id="paywall"
     data-success-callback="badgerCallback"
   >
@@ -29,6 +29,7 @@
       badgerButton.addEventListener('click', function(event) {
         if (typeof web4bch !== 'undefined') {
           web4bch = new Web4Bch(web4bch.currentProvider)
+          console.log(web4bch.bch)
 
           var txParams = {
             paymentRequestUrl: badgerButton.getAttribute("data-payment-request-url")

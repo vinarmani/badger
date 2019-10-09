@@ -102,7 +102,11 @@ export default class SendTransactionScreen extends PersistentForm {
       updateSendErrors,
       updateSendTokenBalance,
       tokenContract,
+      location: {state: {txParams: {txParams}}}
     } = this.props
+
+    //const txParams = {}
+    console.log('txParams', txParams)
 
     const {
       from: { balance: prevBalance },
@@ -193,7 +197,7 @@ export default class SendTransactionScreen extends PersistentForm {
   }
 
   render () {
-    const { history, showHexData, selectedToken } = this.props
+    const { history, showHexData, selectedToken, txParams } = this.props
 
     return (
       <div className="page-container">
@@ -204,7 +208,10 @@ export default class SendTransactionScreen extends PersistentForm {
           showHexData={showHexData}
           selectedToken={selectedToken}
         />
-        <SendFooter history={history} />
+        <SendFooter 
+          history={history}
+          txParams={txParams}
+        />
       </div>
     )
   }

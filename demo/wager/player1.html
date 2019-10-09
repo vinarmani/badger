@@ -4,8 +4,8 @@
   <p>Contract Request</p>
   <p><button
     class="badger-button"
-    data-payment-request-url="https://pay.jeton.tech/c/BvWxonXk2BRg79wWRAo6f1"
-    data-contract-party-hash="e6a3ddc36e4cad4672427d250128397bde07fffa0f5d0a15b7889347324600ca"
+    data-payment-request-url="https://pay.jeton.tech/c/Eja9hDpX5endSx686Vfmvs"
+    data-contract-party-hash="5f915ce7be0baa0ae4706bb6cea6308088e94441592691a6f4bc12fe5d98eb88"
     data-paywall-id="paywall"
     data-success-callback="badgerCallback"
   >
@@ -30,6 +30,7 @@
       badgerButton.addEventListener('click', function(event) {
         if (typeof web4bch !== 'undefined') {
           web4bch = new Web4Bch(web4bch.currentProvider)
+          console.log(web4bch.bch.defaultAccount)
 
           var txParams = {
             paymentRequestUrl: badgerButton.getAttribute("data-payment-request-url"),

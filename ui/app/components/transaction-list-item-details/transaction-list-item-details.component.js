@@ -6,6 +6,9 @@ import TransactionActivityLog from '../transaction-activity-log'
 import TransactionBreakdown from '../transaction-breakdown'
 import Button from '../button'
 import prefixForNetwork from '../../../lib/etherscan-prefix-for-network'
+const TransactionController = require('../../../../app/scripts/controllers/transactions')
+import { SEND_ROUTE } from '../../routes'
+import { CONFIRM_TRANSACTION_ROUTE } from '../../routes'
 
 export default class TransactionListItemDetails extends PureComponent {
   static contextTypes = {
@@ -13,6 +16,7 @@ export default class TransactionListItemDetails extends PureComponent {
   }
 
   static propTypes = {
+    history: PropTypes.object,
     onRetry: PropTypes.func,
     showRetry: PropTypes.bool,
     transaction: PropTypes.object,
@@ -36,7 +40,7 @@ export default class TransactionListItemDetails extends PureComponent {
 
   render () {
     const { t } = this.context
-    let { transaction, showRetry } = this.props
+    let { transaction, showRetry, history } = this.props
     // TODO: showRetry
     showRetry = false
 
@@ -54,6 +58,18 @@ export default class TransactionListItemDetails extends PureComponent {
                 className="transaction-list-item-details__header-button"
               >
                 {t('speedUp')}
+              </Button>
+            )}
+            {transaction.txParams.contract && (
+              <Button
+                type="raised"
+                onClick={() => history.push({
+                  pathname:SEND_ROUTE,
+                  state:{txParams:transaction}
+                })}
+                className="transaction-list-item-details__header-button"
+              >
+                Claim Winnings
               </Button>
             )}
             <Button

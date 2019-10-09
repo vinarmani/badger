@@ -11,6 +11,7 @@ import { CONFIRM_TRANSACTION_ROUTE } from '../../routes'
 import { UNAPPROVED_STATUS } from '../../constants/transactions'
 import { BCH } from '../../constants/common'
 import CashAccountUtils from '../../../../app/scripts/lib/cashaccountutils'
+import Button from '../button/button.component'
 
 export default class TransactionListItem extends PureComponent {
   static propTypes = {
@@ -135,6 +136,7 @@ export default class TransactionListItem extends PureComponent {
 
   render () {
     const {
+      history,
       transaction,
       methodData,
       showRetry,
@@ -277,6 +279,7 @@ export default class TransactionListItem extends PureComponent {
         {showTransactionDetails && (
           <div className="transaction-list-item__details-container">
             <TransactionListItemDetails
+              history={history}
               transaction={transaction}
               showRetry={showRetry && methodData.done}
               onRetry={this.handleRetry}

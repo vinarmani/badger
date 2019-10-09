@@ -19,6 +19,7 @@ const {
 
 const bitboxUtils = require('./bitbox-utils')
 const slpUtils = require('./slp-utils')
+const jetonUtils = require('./jeton-utils')
 const PaymentProtocol = require('bitcore-payment-protocol')
 
 /**
@@ -324,9 +325,9 @@ class TransactionController extends EventEmitter {
           switch (finishedTxMeta.status) {
             // TODO: Remove confirmed after txQueue is live, only submit to queue
             case 'confirmed':
-              return resolve(finishedTxMeta.hash)
+              return resolve(finishedTxMeta.hash + ' confirmed')
             case 'submitted':
-              return resolve(finishedTxMeta.hash)
+              return resolve(finishedTxMeta.hash + ' submitted')
             case 'rejected':
               return reject(
                 cleanErrorStack(
