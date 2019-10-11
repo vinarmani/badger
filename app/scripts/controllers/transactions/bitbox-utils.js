@@ -8,12 +8,18 @@ const SLPJS = new slpjs.Slp(SLP)
 const PaymentProtocol = require('bitcore-payment-protocol')
 const axios = require('axios')
 const toBuffer = require('blob-to-buffer')
+const jetonUtils = require('./jeton-utils')
 
 class BitboxUtils {
   static getByteCount = SLP.BitcoinCash.getByteCount
 
   static addressFromOutputScript(scriptBuffer) {
     return SLP.Address.fromOutputScript(scriptBuffer)
+  }
+
+  static async getAddressBalance (address) {
+    let addressDetails = await this.getAddressDetails(address)
+    return addressDetails.balanceSat
   }
 
   static async getLargestUtxo (address) {
@@ -74,6 +80,23 @@ class BitboxUtils {
     })
   }
 
+  static async getAddressDetails (address) {
+    return new Promise((resolve, reject) => {
+      SLP.Address.details(address).then(
+        result => {
+          if (result) {
+            resolve(result)
+          } else {
+            reject('Undefined details for ', address)
+          }
+        },
+        err => {
+          reject(err)
+        }
+      )
+    })
+  }
+
   static encodeOpReturn (dataArray) {
     const script = [SLP.Script.opcodes.OP_RETURN]
     dataArray.forEach(data => {
@@ -110,6 +133,24 @@ class BitboxUtils {
       )
     })
   }
+
+
+  static signAndPublishP2SHTransaction (txParams, keyPair) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const from = txParams.from
+        let utxos = await this.getAllUtxo(from)
+        const hex = jetonUtils.buildTransaction(txParams, utxos, keyPair.toWIF()) 
+
+        // TODO: Handle failures: transaction already in blockchain, mempool length, networking
+        const txid = await this.publishTx(hex)
+        resolve(txid)
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
+
 
   static signAndPublishBchTransaction (txParams, spendableUtxos) {
     return new Promise(async (resolve, reject) => {
@@ -247,6 +288,10 @@ class BitboxUtils {
       })
     })
   }
+
+
+  
+
 
   static signAndPublishPaymentRequestTransaction(
     txParams,

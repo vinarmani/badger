@@ -11,17 +11,9 @@ import {
 import SendHeader from './send-header'
 import SendContent from './send-content'
 import SendFooter from './send-footer'
+const jetonUtils = require('../../../../app/scripts/controllers/transactions/jeton-utils')
 
 export default class SendTransactionScreen extends PersistentForm {
-  constructor(props) {
-    // Required step: always call the parent class' constructor
-    super(props);
-
-    // Set the state directly. Use props if necessary.
-    this.state = {
-      refereeSig: null
-    }
-  }
 
   static propTypes = {
     amount: PropTypes.string,
@@ -33,6 +25,7 @@ export default class SendTransactionScreen extends PersistentForm {
     conversionRate: PropTypes.number,
     editingTransactionId: PropTypes.string,
     from: PropTypes.object,
+    to: PropTypes.string,
     gasLimit: PropTypes.string,
     gasPrice: PropTypes.string,
     gasTotal: PropTypes.string,
@@ -46,6 +39,10 @@ export default class SendTransactionScreen extends PersistentForm {
     tokenContract: PropTypes.object,
     updateAndSetGasTotal: PropTypes.func,
     updateSendErrors: PropTypes.func,
+    updateSendTo: PropTypes.func,
+    updateSendFrom: PropTypes.func,
+    updateSendData: PropTypes.func,
+    updateSendAmount: PropTypes.string,
     updateSendTokenBalance: PropTypes.func,
     scanQrCode: PropTypes.func,
     qrCodeDetected: PropTypes.func,
@@ -99,8 +96,25 @@ export default class SendTransactionScreen extends PersistentForm {
   }
 
   updateRefereeSignature (signature) {
-    this.setState({refereeSig:signature})
-    this.props.location.state.txParams.refereeSig = signature
+    const {txParams} = this.props.location.state
+    txParams.refereeSig = signature
+    const sigResult = this.checkRefereeSignature(txParams)
+    this.props.location.state.txParams.refereeSig = sigResult.refereeSig
+    this.props.location.state.txParams.to = sigResult.toAddr
+  }
+
+  checkRefereeSignature (txParams) {
+    const {contract: {parties, refereePubKey}, from, refereeSig} = txParams
+    const party = parties.filter(player => player.address == from)
+    const valid = jetonUtils.verifySignature(party[0].message, refereePubKey, refereeSig)
+    console.log('is referee signature valid? ', valid)
+    if(valid) {
+      return {
+        refereeSig: refereeSig,
+        toAddr: party[0].address
+      }
+    }
+    return undefined
   }
 
   componentDidUpdate (prevProps) {
@@ -115,7 +129,9 @@ export default class SendTransactionScreen extends PersistentForm {
       selectedToken,
       tokenBalance,
       updateSendErrors,
+      updateSendTo,
       updateSendTokenBalance,
+      to,
       tokenContract,
     } = this.props
 
@@ -128,6 +144,9 @@ export default class SendTransactionScreen extends PersistentForm {
 
     const uninitialized = [prevBalance].every(n => n === null)
 
+    console.log('to', to)
+      
+    /*
     const amountErrorRequiresUpdate = doesAmountErrorRequireUpdate({
       balance,
       gasTotal,
@@ -175,7 +194,7 @@ export default class SendTransactionScreen extends PersistentForm {
         })
         this.updateGas()
       }
-    }
+    } */
   }
 
   componentWillMount () {
@@ -212,15 +231,17 @@ export default class SendTransactionScreen extends PersistentForm {
     const { 
       history, 
       showHexData, 
-      selectedToken, 
+      selectedToken,
+      updateSendData,
+      updateSendFrom,
+      updateSendTo,
+      updateSendAmount,
+      to
     } = this.props
-
-    const {refereeSig} = this.state
 
     let txParams = {}
     if (this.props.location.state) {
       txParams = this.props.location.state.txParams
-      txParams.refereeSig = refereeSig
     }
 
     console.log('txParams to footer', txParams)
@@ -234,6 +255,12 @@ export default class SendTransactionScreen extends PersistentForm {
           showHexData={showHexData}
           selectedToken={selectedToken}
           updateSignature={sig => this.updateRefereeSignature(sig)}
+          updateSendTo={updateSendTo}
+          updateSendFrom={updateSendFrom}
+          updateSendData={updateSendData}
+          updateSendAmount={updateSendAmount}
+          toAddr={to ? null : txParams.to}
+          txParams={txParams}
         />
         <SendFooter 
           history={history}

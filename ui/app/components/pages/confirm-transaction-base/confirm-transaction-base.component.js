@@ -434,6 +434,14 @@ export default class ConfirmTransactionBase extends Component {
       txParams.opReturn !== undefined &&
       txParams.opReturn.data[0] === '0x01010101'
 
+    // Handle display for contract redemtion
+    if(txParams.data) {
+      if(txParams.data.contract) {
+        fromAddress = txParams.data.toAddresses[0]
+        fromName = 'Wager Winnings'
+      }
+    }
+
     if (submitSuccess) {
       return this.renderSuccess()
     }

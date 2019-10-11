@@ -27,6 +27,8 @@ function constructTxParams ({
 
   txParams.value = amount
   txParams.to = to
+  txParams.from = from
+  txParams.data = data
 
   return txParams
 }

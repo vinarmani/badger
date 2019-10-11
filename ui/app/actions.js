@@ -195,6 +195,7 @@ var actions = {
   UPDATE_GAS_PRICE: 'UPDATE_GAS_PRICE',
   UPDATE_GAS_TOTAL: 'UPDATE_GAS_TOTAL',
   UPDATE_SEND_FROM: 'UPDATE_SEND_FROM',
+  UPDATE_SEND_DATA: 'UPDATE_SEND_DATA',
   UPDATE_SEND_HEX_DATA: 'UPDATE_SEND_HEX_DATA',
   UPDATE_SEND_TOKEN_BALANCE: 'UPDATE_SEND_TOKEN_BALANCE',
   UPDATE_SEND_TO: 'UPDATE_SEND_TO',
@@ -216,6 +217,7 @@ var actions = {
   updateSendTokenBalance,
   updateSendFrom,
   updateSendHexData,
+  updateSendData,
   updateSendTo,
   updateSendAmount,
   updateSendMemo,
@@ -1043,6 +1045,13 @@ function updateSendFrom (from) {
 function updateSendHexData (value) {
   return {
     type: actions.UPDATE_SEND_HEX_DATA,
+    value,
+  }
+}
+
+function updateSendData (value) {
+  return {
+    type: actions.UPDATE_SEND_DATA,
     value,
   }
 }

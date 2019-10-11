@@ -11,9 +11,33 @@ export default class SendContent extends Component {
   static propTypes = {
     updateGas: PropTypes.func,
     updateSignature: PropTypes.func,
+    updateSendTo: PropTypes.func,
+    updateSendFrom: PropTypes.func,
+    updateSendData: PropTypes.func,
+    updateSendAmount: PropTypes.string,
     scanQrCode: PropTypes.func,
     showHexData: PropTypes.bool,
     selectedToken: PropTypes.object,
+    toAddr: PropTypes.string,
+    txParams: PropTypes.object,
+
+  }
+
+  componentDidUpdate () {
+    const { 
+      toAddr,
+      txParams,
+      updateSendData,
+      updateSendAmount,
+      updateSendTo
+    } = this.props
+
+    console.log('toAddr', toAddr)
+    if(toAddr) {
+      updateSendTo(toAddr)
+      updateSendData(txParams)
+    }
+
   }
 
   render () {

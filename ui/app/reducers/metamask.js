@@ -45,6 +45,7 @@ function reduceMetamask(state, action) {
         to: '',
         amount: '0',
         memo: '',
+        data: {},
         errors: {},
         maxModeOn: false,
         editingTransactionId: null,
@@ -256,6 +257,14 @@ function reduceMetamask(state, action) {
           data: action.value,
         },
       })
+
+    case actions.UPDATE_SEND_DATA:
+        return extend(metamaskState, {
+          send: {
+            ...metamaskState.send,
+            data: action.value,
+          },
+        })
 
     case actions.UPDATE_SEND_FROM:
       return extend(metamaskState, {

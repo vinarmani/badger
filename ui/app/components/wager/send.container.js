@@ -26,6 +26,9 @@ import {
 } from './send.selectors'
 import {
   updateSendTo,
+  updateSendData,
+  updateSendFrom,
+  updateSendAmount,
   updateSendTokenBalance,
   updateGasData,
   setGasTotal,
@@ -110,5 +113,11 @@ function mapDispatchToProps (dispatch) {
     scanQrCode: () => dispatch(showQrScanner(SEND_ROUTE)),
     qrCodeDetected: data => dispatch(qrCodeDetected(data)),
     updateSendTo: (to, nickname) => dispatch(updateSendTo(to, nickname)),
+    updateSendFrom: (from) => dispatch(updateSendFrom(from)),
+    updateSendData: (data) => dispatch(updateSendData(data)),
+    updateSendAmount: (amount) => dispatch(updateSendAmount(amount)),
+    updateSendToError: toErrorObject => {
+      dispatch(updateSendErrors(toErrorObject))
+    },
   }
 }

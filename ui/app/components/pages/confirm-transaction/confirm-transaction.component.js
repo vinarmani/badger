@@ -23,6 +23,16 @@ import {
 } from '../../../routes'
 
 export default class ConfirmTransaction extends Component {
+  constructor(props) {
+    // Required step: always call the parent class' constructor
+    super(props);
+
+    // Set the state directly. Use props if necessary.
+    this.state = {
+      txParams: null
+    }
+  }
+
   static propTypes = {
     history: PropTypes.object.isRequired,
     totalUnapprovedCount: PropTypes.number.isRequired,
@@ -53,7 +63,9 @@ export default class ConfirmTransaction extends Component {
     if (this.props.location.state)
       txParams = this.props.location.state.txParams
 
-    this.setState({txParams:txParams})
+    //this.setState({txParams:txParams})
+
+    console.log('txParams in confirm page', txParams)
 
     if (!totalUnapprovedCount && !send.to) {
       history.replace(DEFAULT_ROUTE)
@@ -66,6 +78,7 @@ export default class ConfirmTransaction extends Component {
   }
 
   componentDidUpdate () {
+    console.log('updating')
     const {
       setTransactionToConfirm,
       confirmTransaction: { txData: { id: transactionId } = {} },
@@ -96,23 +109,29 @@ export default class ConfirmTransaction extends Component {
     } = this.props
     const paramsTransactionId = this.getParamsTransactionId()
 
+    console.log('in set transactions to confirm', this.props)
+    console.log('paramsTransactionId', paramsTransactionId)
+
     if (paramsTransactionId) {
       // Check to make sure params ID is valid
       const tx = unconfirmedTransactions.find(
         ({ id }) => id + '' === paramsTransactionId
       )
-
+      
+      console.log('tx', tx)
       if (!tx) {
         history.replace(DEFAULT_ROUTE)
       } else {
         setTransactionToConfirm(paramsTransactionId)
       }
     } else if (unconfirmedTransactions.length) {
+      console.log('hass length')
       const totalUnconfirmed = unconfirmedTransactions.length
       const transaction = unconfirmedTransactions[totalUnconfirmed - 1]
       const { id: transactionId, loadingDefaults } = transaction
 
       if (!loadingDefaults) {
+        ('!loadingDefualts')
         setTransactionToConfirm(transactionId)
       }
     }
@@ -121,6 +140,11 @@ export default class ConfirmTransaction extends Component {
   render () {
     const { confirmTransaction: { txData: { id } } = {} } = this.props
     const paramsTransactionId = this.getParamsTransactionId()
+
+    console.log('in render. paramsTranscationId', paramsTransactionId)
+    console.log('id in render', id)
+    if(id)
+      console.log(this.props.confirmTransaction)
 
     // Show routes when state.confirmTransaction has been set and when either the ID in the params
     // isn't specified or is specified and matches the ID in state.confirmTransaction in order to

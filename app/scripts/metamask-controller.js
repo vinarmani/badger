@@ -895,6 +895,7 @@ module.exports = class MetamaskController extends EventEmitter {
    * @param {Object} req - (optional) the original request, containing the origin
    */
   async newUnapprovedTransaction (txParams, req) {
+    console.log('newUnapprovedTransaction')
     return await this.txController.newUnapprovedTransaction(txParams, req)
   }
 
@@ -910,6 +911,7 @@ module.exports = class MetamaskController extends EventEmitter {
    * @param {Function} cb = The callback function called with the signature.
    */
   newUnsignedMessage (msgParams, req) {
+    console.log('newUnsignedMessage')
     const promise = this.messageManager.addUnapprovedMessageAsync(
       msgParams,
       req
@@ -926,6 +928,7 @@ module.exports = class MetamaskController extends EventEmitter {
    * @returns {Promise<Object>} Full state update.
    */
   async signMessage (msgParams) {
+    console.log('signMessage')
     // log.info('BadgerController - signMessage')
     const msgId = msgParams.metamaskId
 
@@ -998,6 +1001,7 @@ module.exports = class MetamaskController extends EventEmitter {
    * @returns {Promise<Object>} - A full state update.
    */
   signPersonalMessage (msgParams) {
+    console.log('signPersonalMessage')
     // log.info('MetaMaskController - signPersonalMessage')
     const msgId = msgParams.metamaskId
     // sets the status op the message to 'approved'
@@ -1055,6 +1059,7 @@ module.exports = class MetamaskController extends EventEmitter {
    * @returns {Object} Full state update.
    */
   async signTypedMessage (msgParams) {
+    console.log('signTypedMessage')
     // log.info('MetaMaskController - eth_signTypedData')
     const msgId = msgParams.metamaskId
     const version = msgParams.version

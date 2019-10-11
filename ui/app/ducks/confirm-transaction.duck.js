@@ -407,10 +407,11 @@ export function setTransactionToConfirm (transactionId) {
           dispatch(setFetchingData(false))
         }
 
-        const tokenData = getTokenData(data)
-        dispatch(updateTokenData(tokenData))
+        
 
         try {
+          const tokenData = getTokenData(data)
+          dispatch(updateTokenData(tokenData))
           const tokenSymbolData =
             (await getSymbolAndDecimals(tokenAddress, existingTokens)) || {}
           const {

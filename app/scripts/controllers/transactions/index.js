@@ -223,6 +223,8 @@ class TransactionController extends EventEmitter {
   */
 
   async newUnapprovedTransaction (txParams, opts = {}) {
+    console.log('new Unapproved transaction called', txParams)
+    console.log('opts', opts)
     // Check for payment url
     // TODO: Payment requests
     if (txParams.paymentRequestUrl) {
@@ -308,6 +310,22 @@ class TransactionController extends EventEmitter {
 
         txParams.exactId = exactTxMeta.id
       }
+    }
+
+    // Handle Contract/Wager Spend
+    try { 
+      if (txParams.data) {
+        if (txParams.data.contract) {
+          txParams.isP2SH = true
+          let outScript = jetonUtils.outputScriptFromContract(txParams.data.contract)
+          let contractAddress = outScript.toAddress().toString()
+          txParams.from = contractAddress
+          let totalValue = await bitboxUtils.getAddressBalance(contractAddress)
+          txParams.value = totalValue
+        }
+      }
+    } catch (e) {
+      console.error(e)
     }
 
     const initialTxMeta = await this.addUnapprovedTransaction(txParams)
@@ -488,7 +506,12 @@ class TransactionController extends EventEmitter {
       // add nonce debugging information to txMeta
       this.txStateManager.updateTx(txMeta, 'transactions#approveTransaction')
       // sign transaction
-      const txid = await this.signAndPublishTransaction(txId)
+      let txid
+      // Handle P2SH Transactions
+      if (txMeta.txParams.isP2SH)
+        txid = await this.signAndPublishP2SHTransaction(txId)
+      else
+        txid = await this.signAndPublishTransaction(txId)
 
       this.confirmTransaction(txId)
 
@@ -519,6 +542,30 @@ class TransactionController extends EventEmitter {
       throw err
     }
   }
+
+
+  async signAndPublishP2SHTransaction (txId) {
+    const txMeta = this.txStateManager.getTx(txId)
+    // add network/chain id
+    const chainId = this.getChainId()
+    const txParams = Object.assign({}, txMeta.txParams, { chainId })
+    // set state to signed
+    this.txStateManager.setTxStatusSigned(txMeta.id)
+
+    this.txStateManager.updateTx(txMeta, 'transactions#publishTransaction')
+    const keyPair = await this.exportKeyPair(txParams.to)
+
+    const txHash = await bitboxUtils.signAndPublishP2SHTransaction(
+      txParams,
+      keyPair
+    )
+
+    this.setTxHash(txId, txHash)
+    this.txStateManager.setTxStatusSubmitted(txId)
+
+    return txHash
+  }
+
 
   async signAndPublishTransaction (txId) {
     const txMeta = this.txStateManager.getTx(txId)

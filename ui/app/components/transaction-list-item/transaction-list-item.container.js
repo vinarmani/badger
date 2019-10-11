@@ -18,7 +18,14 @@ const mapStateToProps = (state, ownProps) => {
   } = ownProps
   const sendTokenData = ownProps.transaction.txParams.sendTokenData
 
-  const tokenData = data && getTokenData(data)
+  let gotTokenData = {}
+  try {
+    gotTokenData = getTokenData(data)
+  } catch (e) {
+    console.error(e)
+  }
+
+  const tokenData = data && gotTokenData
   const nonceAndDate = nonce
     ? `#${hexToDecimal(nonce)} - ${formatDate(time)}`
     : formatDate(time)

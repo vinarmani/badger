@@ -25,7 +25,6 @@ export default class SendFooter extends Component {
     to: PropTypes.string,
     toAccounts: PropTypes.array,
     tokenBalance: PropTypes.string,
-    txParams: PropTypes.object,
     unapprovedTxs: PropTypes.object,
     update: PropTypes.func,
   }
@@ -59,10 +58,6 @@ export default class SendFooter extends Component {
       history,
     } = this.props
     let { to, toAccounts } = this.props
-
-    let txParams = {}
-    if (this.props.txParams)
-      txParams = this.props.txParams
 
     if (cashaccount.isCashAccount(to)) {
       toAccounts.name = to
@@ -130,17 +125,15 @@ export default class SendFooter extends Component {
     if (this.state.err === '') {
       Promise.resolve(promise).then(() => {
         this.setState({ err: '' })
-        history.push({
-          pathname:CONFIRM_TRANSACTION_ROUTE,
-          state:{txParams:txParams}
-        })
-      })
+        history.push(CONFIRM_TRANSACTION_ROUTE)
+      }).catch(e => console.error(e))
     }
   }
 
   formShouldBeDisabled () {
     const { err } = this.state
     const { inError, selectedToken, to } = this.props
+    return !to
     // clear error msg
     if (err && to === '') {
       this.setState({ err: '' })
