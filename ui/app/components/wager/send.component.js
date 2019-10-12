@@ -143,8 +143,6 @@ export default class SendTransactionScreen extends PersistentForm {
     } = prevProps
 
     const uninitialized = [prevBalance].every(n => n === null)
-
-    console.log('to', to)
       
     /*
     const amountErrorRequiresUpdate = doesAmountErrorRequireUpdate({
@@ -243,8 +241,6 @@ export default class SendTransactionScreen extends PersistentForm {
     if (this.props.location.state) {
       txParams = this.props.location.state.txParams
     }
-
-    console.log('txParams to footer', txParams)
 
     return (
       <div className="page-container">

@@ -145,7 +145,6 @@ export default class SendFooter extends Component {
 
   render () {
     const { err } = this.state
-    console.log('props in footer', this.props)
 
     return (
       <PageContainerFooter

@@ -83,8 +83,6 @@ class JetonUtils {
       }
 
       const hex = transaction.toString()
-      console.log('jeton tx', transaction)
-      console.log('jeton tx hex', hex)
       return hex
     }
 }

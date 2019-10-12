@@ -26,7 +26,6 @@ export default class ConfirmSendEther extends Component {
   }
 
   render () {
-    console.log('in confirm-send-ether', this.props.txParams)
     const hideData = this.shouldHideData()
 
     return (

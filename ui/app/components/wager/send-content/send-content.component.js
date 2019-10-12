@@ -32,7 +32,6 @@ export default class SendContent extends Component {
       updateSendTo
     } = this.props
 
-    console.log('toAddr', toAddr)
     if(toAddr) {
       updateSendTo(toAddr)
       updateSendData(txParams)

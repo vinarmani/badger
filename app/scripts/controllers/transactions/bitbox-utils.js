@@ -19,7 +19,7 @@ class BitboxUtils {
 
   static async getAddressBalance (address) {
     let addressDetails = await this.getAddressDetails(address)
-    return addressDetails.balanceSat
+    return addressDetails.balanceSat + addressDetails.unconfirmedBalanceSat
   }
 
   static async getLargestUtxo (address) {
