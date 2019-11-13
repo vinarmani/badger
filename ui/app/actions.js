@@ -194,6 +194,7 @@ var actions = {
   UPDATE_GAS_LIMIT: 'UPDATE_GAS_LIMIT',
   UPDATE_GAS_PRICE: 'UPDATE_GAS_PRICE',
   UPDATE_GAS_TOTAL: 'UPDATE_GAS_TOTAL',
+  UPDATE_USE_POSTAGE: 'UPDATE_USE_POSTAGE',
   UPDATE_SEND_FROM: 'UPDATE_SEND_FROM',
   UPDATE_SEND_DATA: 'UPDATE_SEND_DATA',
   UPDATE_SEND_HEX_DATA: 'UPDATE_SEND_HEX_DATA',
@@ -214,6 +215,7 @@ var actions = {
   updateGasData,
   setGasTotal,
   setSendTokenBalance,
+  updateUsePostage,
   updateSendTokenBalance,
   updateSendFrom,
   updateSendHexData,
@@ -1025,6 +1027,13 @@ function updateSendErrors (errorObject) {
   return {
     type: actions.UPDATE_SEND_ERRORS,
     value: errorObject,
+  }
+}
+
+function updateUsePostage (usePostage) {
+  return {
+    type: actions.UPDATE_USE_POSTAGE,
+    value: usePostage,
   }
 }
 

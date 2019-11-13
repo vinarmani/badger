@@ -10,6 +10,8 @@ const axios = require('axios')
 const toBuffer = require('blob-to-buffer')
 const jetonUtils = require('./jeton-utils')
 
+const postageUrl = 'https://pay.cointext.io/postage'
+
 class BitboxUtils {
   static getByteCount = SLP.BitcoinCash.getByteCount
 
@@ -451,6 +453,22 @@ class BitboxUtils {
   ) {
     return new Promise(async (resolve, reject) => {
       try {
+        // Use Simple Ledger Postage Protocol?
+        const usePostage = txParams.data ? txParams.data.usePostage : false
+        let stampInfo
+        let stampWeight
+        let stampToUse
+        if (usePostage) {
+          const stampReq = await axios.get(postageUrl)
+          stampInfo = stampReq.data
+          console.log('stampInfo', stampInfo)
+          stampWeight = stampInfo.weight
+          const validStamps = stampInfo.stamps.filter(stamp => stamp.tokenId == tokenMetadata.id)
+          stampToUse = validStamps[0]
+          console.log('stampToUse', stampToUse)
+          if(!stampToUse)
+            throw new Error('Token is not supported by the Post Office')
+        }
         const from = txParams.from
         // Get to addresses from payment request
         if(!txParams.to && txParams.paymentRequestUrl) {
@@ -465,7 +483,7 @@ class BitboxUtils {
         const scaledTokenSendAmount = new BigNumber(
           txParams.value
         ).decimalPlaces(tokenDecimals)
-        const tokenSendAmount = scaledTokenSendAmount.times(10 ** tokenDecimals)
+        let tokenSendAmount = scaledTokenSendAmount.times(10 ** tokenDecimals)
 
         if (tokenSendAmount.lt(1)) {
           throw new Error(
@@ -492,6 +510,27 @@ class BitboxUtils {
             break
           }
         }
+
+        // TODO handle adding the amount if using Post office: txParams.valueArray and tokenSendAmount
+        if(usePostage) {
+          txParams.valueArray = txParams.valueArray ? txParams.valueArray : [tokenSendAmount.toNumber()]
+          const opReturnBytes = 57 + (8 * (txParams.valueArray.length + 2))
+          const byteCount = bitbox.BitcoinCash.getByteCount({ P2PKH: tokenUtxosToSpend.length }, { P2PKH: (txParams.valueArray.length + 2) }) + opReturnBytes
+          console.log('byteCount', byteCount)
+          const outAmount = (txParams.valueArray.length + 2 - tokenUtxosToSpend.length) * 546
+          const totalPostageNeeded = outAmount + byteCount
+          console.log('totalPostageNeeded', totalPostageNeeded)
+
+          // Push stamp amount and address
+          const stampsNeeded = Math.ceil(totalPostageNeeded / stampWeight)
+          console.log('stampsNeeded', stampsNeeded)
+          const stampFee = stampsNeeded * stampToUse.rate
+          const postageFee = new BigNumber(stampFee)
+          console.log('stampFee', stampFee)
+          console.log('postageFee', postageFee)
+          txParams.valueArray.push(stampFee)
+          tokenSendAmount = tokenSendAmount.plus(postageFee)
+        }
         
         if (!tokenBalance.gte(tokenSendAmount)) {
           throw new Error('Insufficient tokens')
@@ -506,12 +545,12 @@ class BitboxUtils {
 
         if (tokenChangeAmount.isGreaterThan(0)) {
           tokenSendArray.push(tokenChangeAmount)
-          sendOpReturn = SLPJS.buildSendOpReturn({
+          sendOpReturn = slpjs.Slp.buildSendOpReturn({
             tokenIdHex: txParams.sendTokenData.tokenId,
             outputQtyArray: tokenSendArray,
           })
         } else {
-          sendOpReturn = SLPJS.buildSendOpReturn({
+          sendOpReturn = slpjs.Slp.buildSendOpReturn({
             tokenIdHex: txParams.sendTokenData.tokenId,
             outputQtyArray: tokenSendArray,
           })
@@ -522,43 +561,56 @@ class BitboxUtils {
           tokenReceiverAddressArray.push(tokenChangeAddress)
         }
 
+        let byteCount = 0
+        let inputSatoshis = 0
+        const inputUtxos = tokenUtxosToSpend
+
         const sortedSpendableUtxos = spendableUtxos.sort((a, b) => {
           return b.satoshis - a.satoshis
         })
 
-        let byteCount = 0
-        let inputSatoshis = 0
-        const inputUtxos = tokenUtxosToSpend
-        for (const utxo of sortedSpendableUtxos) {
-          inputSatoshis = inputSatoshis + utxo.satoshis
-          inputUtxos.push(utxo)
-
-          byteCount = SLPJS.calculateSendCost(
-            sendOpReturn.length,
-            inputUtxos.length,
-            tokenReceiverAddressArray.length + 1, // +1 to receive remaining BCH
-            from
+        // A small amount of BCh is required to send tokens
+        if (sortedSpendableUtxos.length == 0 && !usePostage) {
+          // Not using postage and no BCH UTXOs
+          throw new Error(
+            'Not enough Bitcoin Cash to complete transaction. Deposit a small amount and try again.'
           )
+        } else if (!usePostage) {
+          // Not using Postage
+          for (const utxo of sortedSpendableUtxos) {
+            inputSatoshis = inputSatoshis + utxo.satoshis
+            inputUtxos.push(utxo)
 
-          if (inputSatoshis >= byteCount) {
-            break
+            byteCount = SLPJS.calculateSendCost(
+              sendOpReturn.length,
+              inputUtxos.length,
+              tokenReceiverAddressArray.length + 1, // +1 to receive remaining BCH
+              from
+            )
+
+            if (inputSatoshis >= byteCount) {
+              break
+            }
           }
         }
-        
-        const transactionBuilder = new bitbox.TransactionBuilder('mainnet')
+
         let totalUtxoAmount = 0
+        const transactionBuilder = new bitbox.TransactionBuilder('mainnet')
         inputUtxos.forEach(utxo => {
           transactionBuilder.addInput(utxo.txid, utxo.vout)
           totalUtxoAmount += utxo.satoshis
         })
 
-        const satoshisRemaining = totalUtxoAmount - byteCount
+
+        let satoshisRemaining = totalUtxoAmount - byteCount
 
         // Verify sufficient fee
-        if (satoshisRemaining < 0) {
-          throw new Error(
-            'Not enough Bitcoin Cash for fee. Deposit a small amount and try again.'
-          )
+        if (satoshisRemaining < 0 || byteCount == 0) {
+          if(!usePostage) {
+            throw new Error(
+              'Not enough Bitcoin Cash for fee. Deposit a small amount and try again.'
+            )
+          }
         }
         
         // SLP data output
@@ -575,13 +627,23 @@ class BitboxUtils {
           }
         }
 
+        // Postage Fee Output (second to last)
+        if(usePostage) {
+          let postageFeeAddr = SLP.Address.toCashAddress('simpleledger:qrxj0mftnsrl63uqwn2jcsxvwymgxm7sev7dyx7hrr') // Placeholder
+          transactionBuilder.addOutput(postageFeeAddr, 546)
+        }
+
         // Return remaining token balance output
         if (tokenChangeAmount.isGreaterThan(0)) {
           transactionBuilder.addOutput(tokenChangeAddress, 546)
         }
         
         // Return remaining bch balance output
-        transactionBuilder.addOutput(from, satoshisRemaining + 546)
+        if(!usePostage)
+          transactionBuilder.addOutput(from, satoshisRemaining + 546)
+
+        const sighashType = usePostage ? (transactionBuilder.hashTypes.SIGHASH_ALL | transactionBuilder.hashTypes.SIGHASH_ANYONECANPAY)
+         : transactionBuilder.hashTypes.SIGHASH_ALL
 
         let redeemScript
         inputUtxos.forEach((utxo, index) => {
@@ -589,7 +651,7 @@ class BitboxUtils {
             index,
             utxo.keyPair,
             redeemScript,
-            transactionBuilder.hashTypes.SIGHASH_ALL,
+            sighashType,
             utxo.satoshis
           )
         })
@@ -599,12 +661,13 @@ class BitboxUtils {
         var txid
         
         // Begin BIP70 SLP
-        if (txParams.paymentRequestUrl) {
+        if (txParams.paymentRequestUrl || usePostage) {
           // send the payment transaction
           var payment = new PaymentProtocol().makePayment()
+          let merchantData = txParams.paymentData ? txParams.paymentData.merchantData : '{"returnRawTx":false}'
           payment.set(
             'merchant_data',
-            Buffer.from(txParams.paymentData.merchantData, 'utf-8')
+            Buffer.from(merchantData, 'utf-8')
           )
           payment.set('transactions', [Buffer.from(hex, 'hex')])
 
@@ -631,17 +694,19 @@ class BitboxUtils {
           refundOutputs.push(refundOutput.message)
           payment.set('refund_to', refundOutputs)
           payment.set('memo', '')
+          
+          // Send to Post Office?
+          const paymentUrl = usePostage ? postageUrl : txParams.paymentData.paymentUrl
 
           // serialize and send
           const rawbody = payment.serialize()
           const headers = {
-            Accept:
-              'application/simpleledger-paymentrequest, application/simpleledger-paymentack',
+            Accept: 'application/simpleledger-paymentack',
             'Content-Type': 'application/simpleledger-payment',
             'Content-Transfer-Encoding': 'binary',
           }
           const response = await axios.post(
-            txParams.paymentData.paymentUrl,
+            paymentUrl,
             rawbody,
             {
               headers,
@@ -649,7 +714,10 @@ class BitboxUtils {
             }
           )
 
+
+          response.data.text().then(text => console.log(text))
           const responseTxHex = await this.decodePaymentResponse(response.data)
+          console.log('responseTxHex',responseTxHex)
           txid = this.txidFromHex(responseTxHex)
         } else {
           // Standard SLP

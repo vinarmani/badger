@@ -42,6 +42,7 @@ const selectors = {
   getSendMaxModeState,
   getSendTo,
   getSendToAccounts,
+  getSendUsePostage,
   getTokenBalance,
   getTokenExchangeRate,
   getUnapprovedTxs,
@@ -271,6 +272,10 @@ function getSendMaxModeState (state) {
 
 function getSendTo (state) {
   return state.metamask.send.to
+}
+
+function getSendUsePostage (state) {
+  return state.metamask.send.usePostage
 }
 
 function getSendToAccounts (state) {

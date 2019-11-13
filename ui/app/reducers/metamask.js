@@ -51,6 +51,7 @@ function reduceMetamask(state, action) {
         editingTransactionId: null,
         forceGasMin: null,
         toNickname: '',
+        usePostage: false
       },
       coinOptions: {},
       useBlockie: false,
@@ -239,6 +240,14 @@ function reduceMetamask(state, action) {
         send: {
           ...metamaskState.send,
           gasTotal: action.value,
+        },
+      })
+
+    case actions.UPDATE_USE_POSTAGE:
+      return extend(metamaskState, {
+        send: {
+          ...metamaskState.send,
+          usePostage: action.value,
         },
       })
 
